@@ -1,13 +1,17 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
+import { signOut } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
-import { User, FileText, Calendar, Building2, Settings, Menu } from "lucide-react";
+import { User as UserIcon, FileText, Calendar, Building2, Settings, Menu, LogIn, UserPlus } from "lucide-react";
 
 const navItems = [
-  { href: "/", label: "Intermittents", icon: User },
+  { href: "/", label: "Intermittents", icon: UserIcon },
   { href: "/annonces", label: "Mes annonces", icon: FileText },
   { href: "/planning", label: "Planning", icon: Calendar },
   { href: "/entreprise", label: "Entreprise", icon: Building2 },
@@ -16,6 +20,22 @@ const navItems = [
 
 export function Header() {
   const pathname = usePathname();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card shadow-sm">
@@ -53,12 +73,48 @@ export function Header() {
           })}
         </nav>
 
-        <div className="flex md:hidden">
-          <Button variant="ghost" size="icon" aria-label="Menu" asChild>
-            <Link href="/">
-              <Menu className="size-6" />
-            </Link>
-          </Button>
+        <div className="flex items-center gap-2">
+          {!loading && (
+            <>
+              {user ? (
+                <>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/parametres" className="flex items-center gap-2">
+                      <UserIcon className="size-4" />
+                      <span className="hidden sm:inline">Mon compte</span>
+                    </Link>
+                  </Button>
+                  <form action={signOut}>
+                    <Button type="submit" variant="outline" size="sm">
+                      Déconnexion
+                    </Button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/connexion" className="flex items-center gap-2">
+                      <LogIn className="size-4" />
+                      Connexion
+                    </Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link href="/inscription" className="flex items-center gap-2">
+                      <UserPlus className="size-4" />
+                      Inscription
+                    </Link>
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+          <div className="flex md:hidden">
+            <Button variant="ghost" size="icon" aria-label="Menu" asChild>
+              <Link href="/">
+                <Menu className="size-6" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
     </header>

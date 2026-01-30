@@ -45,6 +45,7 @@ Application web de mise en relation entre **talents intermittents** et **recrute
 
 - **Variables d’environnement** : `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` (voir `.env.example`).
 - **Tables utilisées** : `users`, `intermittent_profiles`, `recruiter_profiles`, `skills`, `intermittent_skills`, `calendar_blocks`, `events`, `job_posts`, `applications`, `bookings`.
+- **Authentification** : Supabase Auth (email/mot de passe). Inscription et connexion distinctes pour **recruteurs** et **intermittents** (`/inscription`, `/inscription/recruteur`, `/inscription/intermittent`, `/connexion`). Après inscription, un **trigger** sur `auth.users` crée la ligne dans `public.users` et le profil correspondant (voir `supabase/trigger-auth-user.sql`). Exécuter **`supabase/trigger-auth-user.sql`** puis **`supabase/auth-rls.sql`** dans l’éditeur SQL Supabase.
 - **Correspondance logique** :
   - Page d’accueil → `intermittent_profiles` + `intermittent_skills` + `bookings` (comptage).
   - `/talents/[id]` → détail d’un profil intermittent.
