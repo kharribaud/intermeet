@@ -1,0 +1,17 @@
+{
+  "node": {
+    "4070a5f19f492aac30652ff2e5fbba73c2b21c9ca6": {
+      "workers": {
+        "app/page": {
+          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fharibogoss%2FDocuments%2Fintermeet%2Fapp%2Factions%2Ftalents.ts%22%2C%5B%5B%224070a5f19f492aac30652ff2e5fbba73c2b21c9ca6%22%2C%22getRecommendedTalents%22%5D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/page": "rsc"
+      }
+    }
+  },
+  "edge": {},
+  "encryptionKey": "LoM3h9R//7gkawNL8BW7uuw1ix2BHU6+AO6ionmVTQA="
+}
