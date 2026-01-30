@@ -21,7 +21,8 @@ export async function getRecommendedTalents(
         display_name,
         bio,
         city,
-        seniority_years
+        seniority_years,
+        avatar_url
       `
       )
       .limit(20);
@@ -89,15 +90,17 @@ export async function getRecommendedTalents(
       }
     });
 
-    const result: TalentCardData[] = profiles.map((p) => ({
+    const result: TalentCardData[] = profiles.map((p, idx) => ({
       user_id: p.user_id,
       display_name: p.display_name,
       bio: p.bio ?? null,
       city: p.city ?? null,
       seniority_years: p.seniority_years ?? null,
+      avatar_url: (p as { avatar_url?: string | null }).avatar_url ?? null,
       skills: skillsByUser[p.user_id] ?? [],
       bookings_count: bookingsCountByUser[p.user_id] ?? 0,
       rating: 4.8,
+      daily_rate: `${400 + idx * 50}/5 - ${420 + idx * 50} avis`,
       suggested_event: {
         title: "Concert Olympia",
         start_at: "2025-03-15",

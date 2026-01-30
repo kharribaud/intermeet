@@ -5,8 +5,8 @@ import type { TalentCardData } from "@/types/database";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, Star, CalendarCheck, Heart, Mail } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MapPin, CalendarCheck, Heart } from "lucide-react";
 
 interface TalentCardProps {
   talent: TalentCardData;
@@ -36,6 +36,7 @@ export function TalentCard({ talent }: TalentCardProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
           <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
             <Avatar className="size-14 shrink-0 text-lg">
+              {talent.avatar_url && <AvatarImage src={talent.avatar_url} alt={talent.display_name} />}
               <AvatarFallback className="bg-muted text-foreground">{initials}</AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
@@ -44,26 +45,22 @@ export function TalentCard({ talent }: TalentCardProps) {
                 <p className="mt-0.5 text-sm text-muted-foreground">{talent.skills[0].name}</p>
               )}
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {talent.skills?.slice(0, 6).map((s) => (
+                {talent.skills?.slice(0, 4).map((s, idx) => (
                   <Badge
-                    key={s.name}
+                    key={`${s.name}-${idx}`}
                     variant={isPrimaryLevel(s.level) ? "default" : "secondary"}
                   >
                     {s.name}
                   </Badge>
                 ))}
               </div>
-              {talent.bio && (
-                <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{talent.bio}</p>
-              )}
               <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <MapPin className="size-4 shrink-0" />
                   {location}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Star className="size-4 shrink-0 fill-amber-500 text-amber-500" />
-                  {talent.rating}/5
+                  {talent.daily_rate}
                 </span>
                 <span className="flex items-center gap-1">
                   <CalendarCheck className="size-4 shrink-0" />
@@ -83,14 +80,13 @@ export function TalentCard({ talent }: TalentCardProps) {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-start gap-2 sm:flex-col sm:items-end">
+          <div className="flex shrink-0 items-start gap-2">
             <Button variant="outline" size="icon" aria-label="Ajouter aux favoris">
               <Heart className="size-5" />
             </Button>
             <Button asChild>
-              <Link href={`/talents/${talent.user_id}`} className="gap-2">
-                <Mail className="size-5" />
-                Contacter
+              <Link href={`/talents/${talent.user_id}`}>
+                Proposer une mission
               </Link>
             </Button>
           </div>

@@ -133,8 +133,10 @@ export interface TalentCardData {
   bio: string | null;
   city: string | null;
   seniority_years: number | null;
+  avatar_url: string | null;
   skills: { name: string; level: string; category: string | null }[];
   bookings_count: number;
   rating: number;
+  daily_rate: string;
   suggested_event?: { title: string; start_at: string };
 }
