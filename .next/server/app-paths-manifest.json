@@ -1,8 +1,5 @@
 {
-  "/inscription/intermittent/page": "app/inscription/intermittent/page.js",
-  "/parametres/page": "app/parametres/page.js",
-  "/connexion/page": "app/connexion/page.js",
-  "/talents/[id]/page": "app/talents/[id]/page.js",
   "/page": "app/page.js",
-  "/annonces/page": "app/annonces/page.js"
+  "/connexion/page": "app/connexion/page.js",
+  "/parametres/page": "app/parametres/page.js"
 }

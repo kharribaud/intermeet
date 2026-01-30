@@ -1,3 +1,5 @@
+import { DeconnexionButton } from "./DeconnexionButton";
+
 export const metadata = {
   title: "Paramètres | Intermeet",
   description: "Paramètres du compte.",
@@ -11,6 +13,9 @@ export default function ParametresPage() {
       </h1>
       <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
         Paramètres utilisateur (auth, notifications, préférences). À connecter avec Supabase Auth.
+      </div>
+      <div className="mt-8">
+        <DeconnexionButton />
       </div>
     </div>
   );

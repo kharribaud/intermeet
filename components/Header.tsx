@@ -6,21 +6,22 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
-import { signOut } from "@/app/actions/auth";
+import { getCurrentUserAvatar } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
-import { User as UserIcon, FileText, Calendar, Building2, Settings, Menu, LogIn, UserPlus } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { User as UserIcon, Handshake, Briefcase, Calendar, Building2, Menu, LogIn, UserPlus } from "lucide-react";
 
 const navItems = [
-  { href: "/", label: "Intermittents", icon: UserIcon },
-  { href: "/annonces", label: "Mes annonces", icon: FileText },
+  { href: "/", label: "Talents", icon: Handshake },
+  { href: "/events", label: "Mes événements", icon: Briefcase },
   { href: "/planning", label: "Planning", icon: Calendar },
   { href: "/entreprise", label: "Entreprise", icon: Building2 },
-  { href: "/parametres", label: "Paramètres", icon: Settings },
 ] as const;
 
 export function Header() {
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,58 +38,72 @@ export function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) {
+      setAvatarUrl(null);
+      return;
+    }
+    getCurrentUserAvatar().then(setAvatarUrl);
+  }, [user?.id]);
+
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-card shadow-sm">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Button variant="ghost" size="icon" className="shrink-0" asChild>
-          <Link href="/" aria-label="Intermeet Accueil">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-card shadow-sm">
+      <div className="flex h-16 w-full items-center justify-between">
+        <div className="flex shrink-0 items-center pl-3 sm:pl-4">
+          <Link
+            href="/"
+            aria-label="Intermeet Accueil"
+            className="flex items-center p-0 min-w-0"
+          >
             <Image
               src="/logo_intermeet.png"
               alt="Intermeet"
               width={40}
               height={40}
-              className="h-10 w-10 object-contain"
+              className="h-10 w-10 object-contain block"
               priority
             />
           </Link>
-        </Button>
+        </div>
 
-        <nav className="hidden md:flex md:items-center md:gap-1" aria-label="Navigation principale">
-          {navItems.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname === href;
-            return (
-              <Button
-                key={href}
-                variant={isActive ? "secondary" : "ghost"}
-                size="sm"
-                className={isActive ? "text-primary" : ""}
-                asChild
-              >
-                <Link href={href} className="flex items-center gap-2">
-                  <Icon className="size-4" aria-hidden />
-                  {label}
-                </Link>
-              </Button>
-            );
-          })}
-        </nav>
+        <div className="flex flex-1 items-center justify-end gap-1 pr-4 sm:pr-6 lg:pr-8">
+          {user && (
+            <nav className="hidden md:flex md:items-center md:gap-1" aria-label="Navigation principale">
+              {navItems.map(({ href, label, icon: Icon }) => {
+                const isActive = pathname === href;
+                return (
+                  <Button
+                    key={href}
+                    variant={isActive ? "secondary" : "ghost"}
+                    size="sm"
+                    className={isActive ? "text-primary" : ""}
+                    asChild
+                  >
+                    <Link href={href} className="flex items-center gap-2">
+                      <Icon className="size-4" aria-hidden />
+                      {label}
+                    </Link>
+                  </Button>
+                );
+              })}
+            </nav>
+          )}
 
-        <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-2 ${user ? "ml-4 sm:ml-6" : ""}`}>
           {!loading && (
             <>
               {user ? (
                 <>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/parametres" className="flex items-center gap-2">
-                      <UserIcon className="size-4" />
-                      <span className="hidden sm:inline">Mon compte</span>
+                  <Button variant="ghost" size="icon" className="rounded-full" asChild>
+                    <Link href="/parametres" aria-label="Mon compte">
+                      <Avatar className="size-8 ring-2 ring-border">
+                        <AvatarImage src={avatarUrl ?? undefined} alt="" />
+                        <AvatarFallback className="bg-muted text-muted-foreground">
+                          <UserIcon className="size-4" />
+                        </AvatarFallback>
+                      </Avatar>
                     </Link>
                   </Button>
-                  <form action={signOut}>
-                    <Button type="submit" variant="outline" size="sm">
-                      Déconnexion
-                    </Button>
-                  </form>
                 </>
               ) : (
                 <>
@@ -114,6 +129,7 @@ export function Header() {
                 <Menu className="size-6" />
               </Link>
             </Button>
+          </div>
           </div>
         </div>
       </div>

@@ -11,40 +11,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/not-found.js"
     ],
-    "/inscription/intermittent/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/inscription/intermittent/page.js"
+      "static/chunks/app/page.js"
+    ],
+    "/_not-found/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/_not-found/page.js"
     ],
     "/connexion/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/connexion/page.js"
     ],
-    "/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
-    ],
     "/parametres/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/parametres/page.js"
-    ],
-    "/annonces/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/annonces/page.js"
-    ],
-    "/annonces/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/annonces/[id]/page.js"
-    ],
-    "/talents/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/talents/[id]/page.js"
     ]
   }
 }

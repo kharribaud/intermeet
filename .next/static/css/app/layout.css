@@ -428,6 +428,9 @@
   .mb-8 {
     margin-bottom: calc(var(--spacing) * 8);
   }
+  .ml-4 {
+    margin-left: calc(var(--spacing) * 4);
+  }
   .line-clamp-1 {
     overflow: hidden;
     display: -webkit-box;
@@ -439,6 +442,9 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+  }
+  .block {
+    display: block;
   }
   .flex {
     display: flex;
@@ -603,6 +609,9 @@
   .cursor-default {
     cursor: default;
   }
+  .cursor-pointer {
+    cursor: pointer;
+  }
   .scroll-my-1 {
     scroll-margin-block: calc(var(--spacing) * 1);
   }
@@ -632,6 +641,9 @@
   }
   .justify-center {
     justify-content: center;
+  }
+  .justify-end {
+    justify-content: flex-end;
   }
   .justify-start {
     justify-content: flex-start;
@@ -866,11 +878,20 @@
   .pt-6 {
     padding-top: calc(var(--spacing) * 6);
   }
+  .pr-3 {
+    padding-right: calc(var(--spacing) * 3);
+  }
+  .pr-4 {
+    padding-right: calc(var(--spacing) * 4);
+  }
   .pr-8 {
     padding-right: calc(var(--spacing) * 8);
   }
   .pl-2 {
     padding-left: calc(var(--spacing) * 2);
+  }
+  .pl-3 {
+    padding-left: calc(var(--spacing) * 3);
   }
   .pl-10 {
     padding-left: calc(var(--spacing) * 10);
@@ -1002,6 +1023,9 @@
   .ring-background {
     --tw-ring-color: var(--background);
   }
+  .ring-border {
+    --tw-ring-color: var(--border);
+  }
   .outline-hidden {
     --tw-outline-style: none;
     outline-style: none;
@@ -1109,6 +1133,11 @@
       color: var(--primary-foreground);
     }
   }
+  .file\:mr-2 {
+    &::file-selector-button {
+      margin-right: calc(var(--spacing) * 2);
+    }
+  }
   .file\:inline-flex {
     &::file-selector-button {
       display: inline-flex;
@@ -1117,6 +1146,11 @@
   .file\:h-7 {
     &::file-selector-button {
       height: calc(var(--spacing) * 7);
+    }
+  }
+  .file\:cursor-pointer {
+    &::file-selector-button {
+      cursor: pointer;
     }
   }
   .file\:border-0 {
@@ -1509,9 +1543,9 @@
       --tw-enter-scale: .95;
     }
   }
-  .sm\:inline {
+  .sm\:ml-6 {
     @media (width >= 40rem) {
-      display: inline;
+      margin-left: calc(var(--spacing) * 6);
     }
   }
   .sm\:shrink-0 {
@@ -1574,6 +1608,21 @@
       padding-inline: calc(var(--spacing) * 6);
     }
   }
+  .sm\:pr-4 {
+    @media (width >= 40rem) {
+      padding-right: calc(var(--spacing) * 4);
+    }
+  }
+  .sm\:pr-6 {
+    @media (width >= 40rem) {
+      padding-right: calc(var(--spacing) * 6);
+    }
+  }
+  .sm\:pl-4 {
+    @media (width >= 40rem) {
+      padding-left: calc(var(--spacing) * 4);
+    }
+  }
   .sm\:text-3xl {
     @media (width >= 40rem) {
       font-size: var(--text-3xl);
@@ -1609,6 +1658,11 @@
   .lg\:px-8 {
     @media (width >= 64rem) {
       padding-inline: calc(var(--spacing) * 8);
+    }
+  }
+  .lg\:pr-8 {
+    @media (width >= 64rem) {
+      padding-right: calc(var(--spacing) * 8);
     }
   }
   .dark\:border-input {

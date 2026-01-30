@@ -17,7 +17,12 @@ export function ConnexionForm() {
     setPending(true);
     const { error: err } = await signIn(formData);
     setPending(false);
-    if (err) setError(err);
+    if (err) {
+      setError(err);
+      return;
+    }
+    // Rechargement complet pour que le Header relise la session et affiche Mon compte / Déconnexion
+    window.location.href = "/";
   }
 
   return (
