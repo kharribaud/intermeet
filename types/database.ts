@@ -140,6 +140,7 @@ export interface IntermittentProfileWithSkills extends IntermittentProfile {
 export interface TalentCardData {
   user_id: string;
   display_name: string;
+  job_title?: string | null;
   bio: string | null;
   city: string | null;
   seniority_years: number | null;
@@ -147,7 +148,7 @@ export interface TalentCardData {
   skills: { name: string; level: string; category: string | null }[];
   bookings_count: number;
   rating: number;
-  daily_rate: string;
+  reviews_count: number;
   suggested_event?: { title: string; start_at: string };
 }
 
@@ -175,4 +176,38 @@ export interface JobPostWithDetails extends JobPost {
   events: { id: string; title: string; address: string | null; city: string | null } | null;
   job_skills: SkillTag[];
   applications: ApplicationWithProfile[];
+}
+
+export interface TalentSkillGroups {
+  technical: string[];
+  software: string[];
+  certifications: string[];
+}
+
+export interface TalentPastMission {
+  id: string;
+  job_title: string;
+  event_title: string;
+  skills: string[];
+  location: string;
+  client: string;
+  date: string;
+}
+
+export interface TalentReview {
+  id: string;
+  rating: number;
+  title: string;
+  body: string;
+  event_title: string;
+  client: string;
+}
+
+export interface TalentProfileData extends TalentCardData {
+  suggested_events: { id: string; title: string }[];
+  skill_groups: TalentSkillGroups;
+  past_missions: TalentPastMission[];
+  missions_total: number;
+  reviews: TalentReview[];
+  reviews_total: number;
 }
