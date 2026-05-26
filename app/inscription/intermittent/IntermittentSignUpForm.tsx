@@ -22,7 +22,7 @@ export function IntermittentSignUpForm() {
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4" encType="multipart/form-data">
+    <form action={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="avatar">Photo de profil (optionnel)</Label>
         <Input
