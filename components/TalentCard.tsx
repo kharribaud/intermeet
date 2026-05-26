@@ -7,20 +7,11 @@ import { ProposeMissionModal } from "@/components/ProposeMissionModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getInitials } from "@/lib/talent-display";
 import { MapPin, Briefcase, Heart, Star } from "lucide-react";
 
 interface TalentCardProps {
   talent: TalentCardData;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 }
 
 function formatSuggestedDate(isoDate: string): string {
