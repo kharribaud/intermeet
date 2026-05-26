@@ -12,10 +12,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User as UserIcon, Handshake, Briefcase, Calendar, Building2, Menu, LogIn, UserPlus } from "lucide-react";
 
 const navItems = [
-  { href: "/", label: "Talents", icon: Handshake },
-  { href: "/events", label: "Mes événements", icon: Briefcase },
-  { href: "/planning", label: "Planning", icon: Calendar },
-  { href: "/entreprise", label: "Entreprise", icon: Building2 },
+  { href: "/", label: "Talents", icon: Handshake, roles: ["INTERMITTENT", "RECRUITER", "ADMIN"] },
+  { href: "/events", label: "Mes événements", icon: Briefcase, roles: ["INTERMITTENT", "RECRUITER", "ADMIN"] },
+  { href: "/planning", label: "Planning", icon: Calendar, roles: ["INTERMITTENT", "ADMIN"] },
+  { href: "/entreprise", label: "Entreprise", icon: Building2, roles: ["INTERMITTENT", "ADMIN"] },
 ] as const;
 
 export function Header() {
@@ -69,7 +69,7 @@ export function Header() {
         <div className="flex flex-1 items-center justify-end gap-1 pr-4 sm:pr-6 lg:pr-8">
           {user && (
             <nav className="hidden md:flex md:items-center md:gap-1" aria-label="Navigation principale">
-              {navItems.map(({ href, label, icon: Icon }) => {
+              {navItems.filter(({ roles }) => (roles as readonly string[]).includes(user.user_metadata?.role ?? "INTERMITTENT")).map(({ href, label, icon: Icon }) => {
                 const isActive = pathname === href;
                 return (
                   <Button
