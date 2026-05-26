@@ -70,13 +70,23 @@ export interface Event {
   id: string;
   recruiter_user_id: string;
   title: string;
+  event_type: string | null;
   venue_name: string | null;
   city: string | null;
+  address: string | null;
   location_point: unknown | null;
   start_at: string;
   end_at: string;
+  setup_start_at: string | null;
+  setup_end_at: string | null;
+  teardown_start_at: string | null;
+  teardown_end_at: string | null;
   description: string | null;
   status: string | null;
+}
+
+export interface JobPostWithCounts extends JobPost {
+  applications_count: number;
 }
 
 export interface JobPost {
@@ -139,4 +149,30 @@ export interface TalentCardData {
   rating: number;
   daily_rate: string;
   suggested_event?: { title: string; start_at: string };
+}
+
+export interface SkillTag {
+  id: string;
+  name: string;
+  category: string | null;
+}
+
+export interface ApplicationWithProfile extends Application {
+  intermittent_profiles: {
+    user_id: string;
+    display_name: string;
+    avatar_url: string | null;
+    city: string | null;
+    seniority_years: number | null;
+    intermittent_skills: {
+      level: string;
+      skills: { name: string; category: string | null } | null;
+    }[];
+  } | null;
+}
+
+export interface JobPostWithDetails extends JobPost {
+  events: { id: string; title: string; address: string | null; city: string | null } | null;
+  job_skills: SkillTag[];
+  applications: ApplicationWithProfile[];
 }

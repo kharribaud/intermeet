@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { JobPost } from "@/types/database";
+import type { JobPost, JobPostWithDetails, ApplicationWithProfile, SkillTag } from "@/types/database";
 
 export async function getJobPosts(): Promise<{
   data: JobPost[] | null;
@@ -167,6 +167,118 @@ export async function deleteJobPost(id: string): Promise<{ error: string | null 
   try {
     const supabase = await createClient();
     const { error } = await supabase.from("job_posts").delete().eq("id", id);
+    return { error: error?.message ?? null };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erreur inconnue" };
+  }
+}
+
+export async function createMissionForEvent(formData: FormData): Promise<{  data: { id: string } | null;
+  error: string | null;
+}> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { data: null, error: "Non authentifié." };
+
+    const event_id = formData.get("event_id") as string;
+    const title = (formData.get("title") as string)?.trim();
+    const description = (formData.get("description") as string)?.trim() || null;
+    const start_at = formData.get("start_at") as string;
+    const end_at = formData.get("end_at") as string;
+
+    if (!event_id || !title || !start_at || !end_at) {
+      return { data: null, error: "Tous les champs requis sont manquants." };
+    }
+
+    const { data, error } = await supabase
+      .from("job_posts")
+      .insert({
+        recruiter_user_id: user.id,
+        event_id,
+        title,
+        description,
+        start_at,
+        end_at,
+        status: "PUBLISHED",
+      })
+      .select("id")
+      .single();
+
+    if (error) return { data: null, error: error.message };
+    return { data: { id: data.id }, error: null };
+  } catch (e) {
+    return { data: null, error: e instanceof Error ? e.message : "Erreur inconnue" };
+  }
+}
+
+export async function getJobPostWithApplications(id: string): Promise<{
+  data: JobPostWithDetails | null;
+  error: string | null;
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Fetch job post with linked event
+    const { data: jobPost, error: jobError } = await supabase
+      .from("job_posts")
+      .select("*, events(id, title, address, city)")
+      .eq("id", id)
+      .single();
+    if (jobError) return { data: null, error: jobError.message };
+
+    // Fetch required skills (graceful fallback if table doesn't exist yet)
+    let jobSkills: SkillTag[] = [];
+    try {
+      const { data: skillRows } = await supabase
+        .from("job_post_skills")
+        .select("skills(id, name, category)")
+        .eq("job_post_id", id);
+      if (skillRows) {
+        jobSkills = (skillRows as unknown as { skills: SkillTag | null }[])
+          .map((r) => r.skills)
+          .filter((s): s is SkillTag => s !== null);
+      }
+    } catch { /* table may not exist yet */ }
+
+    // Fetch applications with applicant profiles and their skills
+    const { data: apps, error: appsError } = await supabase
+      .from("applications")
+      .select(`
+        id, status, cover_note, created_at, updated_at, job_post_id, intermittent_user_id,
+        intermittent_profiles (
+          user_id, display_name, avatar_url, city, seniority_years,
+          intermittent_skills ( level, skills ( name, category ) )
+        )
+      `)
+      .eq("job_post_id", id)
+      .order("created_at", { ascending: false });
+    if (appsError) return { data: null, error: appsError.message };
+
+    return {
+      data: {
+        ...(jobPost as JobPost),
+        events: (jobPost as Record<string, unknown>).events as JobPostWithDetails["events"],
+        job_skills: jobSkills,
+        applications: (apps ?? []) as unknown as ApplicationWithProfile[],
+      },
+      error: null,
+    };
+  } catch (e) {
+    return { data: null, error: e instanceof Error ? e.message : "Erreur inconnue" };
+  }
+}
+
+export async function updateApplicationStatus(
+  applicationId: string,
+  status: "ACCEPTED" | "REJECTED" | "SHORTLISTED"
+): Promise<{ error: string | null }> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("applications")
+      .update({ status })
+      .eq("id", applicationId);
     return { error: error?.message ?? null };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erreur inconnue" };
