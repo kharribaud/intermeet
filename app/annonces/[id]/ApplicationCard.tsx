@@ -5,20 +5,12 @@ import { useRouter } from "next/navigation";
 import { updateApplicationStatus } from "@/app/actions/job-posts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getInitials } from "@/lib/talent-display";
 import type { ApplicationWithProfile } from "@/types/database";
 
 interface Props {
   application: ApplicationWithProfile;
   jobTitle: string;
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 }
 
 export function ApplicationCard({ application, jobTitle }: Props) {

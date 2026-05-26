@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { TalentProfileData } from "@/types/database";
+import { getInitials } from "@/lib/talent-display";
 import { MissionCard } from "@/components/talent-profile/MissionCard";
 import { ReviewCard } from "@/components/talent-profile/ReviewCard";
 import { ProposeMissionModal } from "@/components/ProposeMissionModal";
@@ -20,16 +21,6 @@ import {
 
 interface TalentProfileViewProps {
   profile: TalentProfileData;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 }
 
 function SkillPill({ label }: { label: string }) {

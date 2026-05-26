@@ -2,60 +2,14 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_MISSIONS_PREVIEW, DEMO_REVIEWS_PREVIEW } from "@/lib/talent-demo";
-import type {
-  TalentProfileData,
-  TalentPastMission,
-  TalentSkillGroups,
-} from "@/types/database";
+import { buildSkillGroups } from "@/lib/talent-skills";
+import type { TalentProfileData, TalentPastMission } from "@/types/database";
 
 const DEMO_SUGGESTED_EVENTS = [
   { id: "1", title: "Concert Olympia Véronique Sanson" },
   { id: "2", title: "Festival de la Plage" },
   { id: "3", title: "Stand Engie Vivatech 2025" },
 ];
-
-const DEMO_SKILL_GROUPS: TalentSkillGroups = {
-  technical: ["Régie FOH", "Sound design", "Mixage"],
-  software: ["Grand MA2", "WYSIWIG", "Vectorworks"],
-  certifications: ["CACES nacelle", "Permis PL", "Grand MA2"],
-};
-
-function buildSkillGroups(
-  skills: { name: string; category: string | null }[]
-): TalentSkillGroups {
-  const groups: TalentSkillGroups = {
-    technical: [],
-    software: [],
-    certifications: [],
-  };
-
-  for (const skill of skills) {
-    const cat = skill.category?.toLowerCase() ?? "";
-    if (cat.includes("logiciel") || cat.includes("outil") || cat.includes("software")) {
-      groups.software.push(skill.name);
-    } else if (
-      cat.includes("habilitation") ||
-      cat.includes("certif") ||
-      cat.includes("permis")
-    ) {
-      groups.certifications.push(skill.name);
-    } else {
-      groups.technical.push(skill.name);
-    }
-  }
-
-  if (!groups.technical.length && !groups.software.length && !groups.certifications.length) {
-    return DEMO_SKILL_GROUPS;
-  }
-
-  if (!groups.technical.length) groups.technical = [...DEMO_SKILL_GROUPS.technical];
-  if (!groups.software.length) groups.software = [...DEMO_SKILL_GROUPS.software];
-  if (!groups.certifications.length) {
-    groups.certifications = [...DEMO_SKILL_GROUPS.certifications];
-  }
-
-  return groups;
-}
 
 export async function getTalentById(
   id: string
