@@ -90,22 +90,28 @@ export async function getRecommendedTalents(
       }
     });
 
-    const result: TalentCardData[] = profiles.map((p, idx) => ({
-      user_id: p.user_id,
-      display_name: p.display_name,
-      bio: p.bio ?? null,
-      city: p.city ?? null,
-      seniority_years: p.seniority_years ?? null,
-      avatar_url: (p as { avatar_url?: string | null }).avatar_url ?? null,
-      skills: skillsByUser[p.user_id] ?? [],
-      bookings_count: bookingsCountByUser[p.user_id] ?? 0,
-      rating: 4.8,
-      daily_rate: `${400 + idx * 50}/5 - ${420 + idx * 50} avis`,
-      suggested_event: {
-        title: "Concert Olympia",
-        start_at: "2025-03-15",
-      },
-    }));
+    const result: TalentCardData[] = profiles.map((p) => {
+      const skills = skillsByUser[p.user_id] ?? [];
+      const jobTitle = skills.find((s) => s.category)?.category ?? null;
+
+      return {
+        user_id: p.user_id,
+        display_name: p.display_name,
+        job_title: jobTitle,
+        bio: p.bio ?? null,
+        city: p.city ?? null,
+        seniority_years: p.seniority_years ?? null,
+        avatar_url: (p as { avatar_url?: string | null }).avatar_url ?? null,
+        skills,
+        bookings_count: bookingsCountByUser[p.user_id] ?? 0,
+        rating: 4.8,
+        reviews_count: 42,
+        suggested_event: {
+          title: "Concert Olympia",
+          start_at: "2025-03-15",
+        },
+      };
+    });
 
     return { data: result, error: null };
   } catch (e) {
