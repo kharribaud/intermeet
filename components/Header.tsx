@@ -12,10 +12,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User as UserIcon, Handshake, Briefcase, Calendar, Building2, Menu, LogIn, UserPlus } from "lucide-react";
 
 const navItems = [
-  { href: "/", label: "Talents", icon: Handshake, roles: ["INTERMITTENT", "RECRUITER", "ADMIN"] },
+  { href: "/annonces", label: "Missions", icon: Handshake, roles: ["INTERMITTENT"] },
+  { href: "/", label: "Talents", icon: Handshake, roles: ["RECRUITER", "ADMIN"] },
   { href: "/events", label: "Mes événements", icon: Briefcase, roles: ["INTERMITTENT", "RECRUITER", "ADMIN"] },
   { href: "/planning", label: "Planning", icon: Calendar, roles: ["INTERMITTENT", "ADMIN"] },
-  { href: "/entreprise", label: "Entreprise", icon: Building2, roles: ["INTERMITTENT", "ADMIN"] },
+  { href: "/entreprise", label: "Entreprise", icon: Building2, roles: ["RECRUITER", "ADMIN"] },
 ] as const;
 
 export function Header() {

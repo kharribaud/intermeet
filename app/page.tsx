@@ -1,17 +1,26 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { createClient } from "@/lib/supabase/server";
 import { getRecommendedTalents } from "@/app/actions/talents";
 import { TalentCard } from "@/components/TalentCard";
 import { SmartSuggestionsBanner } from "@/components/SmartSuggestionsBanner";
 import { SearchFilter } from "@/components/SearchFilter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const metadata = {
   title: "Talents recommandés | Intermeet",
   description: "Profils recommandés en fonction de vos annonces et événements.",
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Non connecté ou intermittent → page des missions
+  if (!user || user.user_metadata?.role !== "RECRUITER") {
+    redirect("/annonces");
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
