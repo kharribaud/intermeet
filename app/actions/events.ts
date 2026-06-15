@@ -75,19 +75,57 @@ export async function getMyEvents(userId: string): Promise<{
 }> {
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("events")
-      .select("*, job_posts(count), bookings(count)")
-      .eq("recruiter_user_id", userId)
-      .order("start_at", { ascending: false })
-      .limit(50);
-    if (error) return { data: null, error: error.message };
-    const events = (data ?? []).map((e: Record<string, unknown>) => ({
-      ...(e as EventWithCounts),
-      job_posts_count: (e.job_posts as { count: number }[])?.[0]?.count ?? 0,
-      bookings_count: (e.bookings as { count: number }[])?.[0]?.count ?? 0,
-    }));
-    return { data: events, error: null };
+
+    // Vérifier le rôle de l'utilisateur
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", userId)
+      .single();
+
+    const isRecruiter = userRow?.role === "RECRUITER";
+
+    if (isRecruiter) {
+      // Recruteur : événements qu'il a créés
+      const { data, error } = await supabase
+        .from("events")
+        .select("*, job_posts(count), bookings(count)")
+        .eq("recruiter_user_id", userId)
+        .order("start_at", { ascending: false })
+        .limit(50);
+      if (error) return { data: null, error: error.message };
+      const events = (data ?? []).map((e: Record<string, unknown>) => ({
+        ...(e as EventWithCounts),
+        job_posts_count: (e.job_posts as { count: number }[])?.[0]?.count ?? 0,
+        bookings_count: (e.bookings as { count: number }[])?.[0]?.count ?? 0,
+      }));
+      return { data: events, error: null };
+    } else {
+      // Intermittent : événements où il a un booking confirmé
+      const { data: bookings, error: bookingsError } = await supabase
+        .from("bookings")
+        .select("event_id")
+        .eq("intermittent_user_id", userId)
+        .eq("status", "CONFIRMED")
+        .not("event_id", "is", null);
+      if (bookingsError) return { data: null, error: bookingsError.message };
+
+      const eventIds = [...new Set((bookings ?? []).map((b) => b.event_id as string))];
+      if (eventIds.length === 0) return { data: [], error: null };
+
+      const { data, error } = await supabase
+        .from("events")
+        .select("*, job_posts(count), bookings(count)")
+        .in("id", eventIds)
+        .order("start_at", { ascending: false });
+      if (error) return { data: null, error: error.message };
+      const events = (data ?? []).map((e: Record<string, unknown>) => ({
+        ...(e as EventWithCounts),
+        job_posts_count: (e.job_posts as { count: number }[])?.[0]?.count ?? 0,
+        bookings_count: (e.bookings as { count: number }[])?.[0]?.count ?? 0,
+      }));
+      return { data: events, error: null };
+    }
   } catch (e) {
     return { data: null, error: e instanceof Error ? e.message : "Erreur inconnue" };
   }
