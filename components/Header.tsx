@@ -10,6 +10,7 @@ import { getCurrentUserAvatar } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User as UserIcon, Handshake, Briefcase, Calendar, Building2, Menu, LogIn, UserPlus } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const navItems = [
   { href: "/annonces", label: "Missions", icon: Handshake, roles: ["INTERMITTENT"] },
@@ -95,6 +96,7 @@ export function Header() {
             <>
               {user ? (
                 <>
+                  <NotificationBell />
                   <Button variant="ghost" size="icon" className="rounded-full" asChild>
                     <Link href="/parametres" aria-label="Mon compte">
                       <Avatar className="size-8 ring-2 ring-border">
