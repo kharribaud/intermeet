@@ -64,7 +64,6 @@ export function CandidaterButton({ jobPostId, isLoggedIn, isIntermittent, applic
     });
   }
 
-  // Candidature acceptée
   if (status === "ACCEPTED") {
     return (
       <Button disabled className="bg-[#4b8a7b] text-white border-transparent cursor-default">
@@ -73,7 +72,6 @@ export function CandidaterButton({ jobPostId, isLoggedIn, isIntermittent, applic
     );
   }
 
-  // Candidature refusée
   if (status === "REJECTED") {
     return (
       <Button disabled variant="outline" className="cursor-default text-muted-foreground">
@@ -82,7 +80,6 @@ export function CandidaterButton({ jobPostId, isLoggedIn, isIntermittent, applic
     );
   }
 
-  // Candidature annulée ou jamais postulé
   if (status === "WITHDRAWN" || !status) {
     return (
       <div className="flex flex-col items-end gap-1">
@@ -94,7 +91,6 @@ export function CandidaterButton({ jobPostId, isLoggedIn, isIntermittent, applic
     );
   }
 
-  // Candidature en attente (APPLIED ou SHORTLISTED)
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center gap-2">

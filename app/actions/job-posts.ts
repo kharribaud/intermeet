@@ -276,7 +276,6 @@ export async function updateApplicationStatus(
   try {
     const supabase = await createClient();
 
-    // Récupérer l'application et les détails du job post pour booking + notification
     const { data: application } = await supabase
       .from("applications")
       .select("id, intermittent_user_id, job_post_id")
@@ -291,7 +290,6 @@ export async function updateApplicationStatus(
 
     if (!application) return { error: null };
 
-    // Récupérer le job post pour les notifications et le booking
     const { data: jobPost } = await supabase
       .from("job_posts")
       .select("id, title, recruiter_user_id, event_id, start_at, end_at, pay_amount")
@@ -299,7 +297,6 @@ export async function updateApplicationStatus(
       .single();
 
     if (status === "ACCEPTED" && jobPost) {
-      // Créer un booking
       await supabase.from("bookings").insert({
         job_post_id: jobPost.id,
         event_id: jobPost.event_id ?? null,
@@ -311,7 +308,6 @@ export async function updateApplicationStatus(
         status: "CONFIRMED",
       });
 
-      // Récupérer le titre de l'événement lié si présent
       let eventTitle: string | null = null;
       if (jobPost.event_id) {
         const { data: event } = await supabase
@@ -322,8 +318,7 @@ export async function updateApplicationStatus(
         eventTitle = event?.title ?? null;
       }
 
-      // Notifier l'intermittent : candidature acceptée
-      await supabase.from("notifications").insert({
+      const { error: notifError } = await supabase.from("notifications").insert({
         user_id: application.intermittent_user_id,
         type: "APPLICATION_ACCEPTED",
         payload: {
@@ -334,9 +329,9 @@ export async function updateApplicationStatus(
           event_title: eventTitle,
         },
       });
+      if (notifError) console.error("[notifications] ACCEPTED:", notifError.message);
     } else if (status === "REJECTED" && jobPost) {
-      // Notifier l'intermittent : candidature refusée
-      await supabase.from("notifications").insert({
+      const { error: notifError } = await supabase.from("notifications").insert({
         user_id: application.intermittent_user_id,
         type: "APPLICATION_REJECTED",
         payload: {
@@ -345,6 +340,7 @@ export async function updateApplicationStatus(
           job_post_title: jobPost.title,
         },
       });
+      if (notifError) console.error("[notifications] REJECTED:", notifError.message);
     }
 
     return { error: null };
@@ -371,6 +367,13 @@ export interface PublicJobPostDetail extends PublicJobPost {
   job_skills: SkillTag[];
   user_application_status: string | null;
 }
+
+type JobPostEventSummary = {
+  id: string;
+  title: string;
+  city: string | null;
+  address: string | null;
+};
 
 export async function getPublicJobPosts(query?: string): Promise<{
   data: PublicJobPost[] | null;
@@ -407,7 +410,8 @@ export async function getPublicJobPosts(query?: string): Promise<{
     }
 
     const posts: PublicJobPost[] = (data ?? []).map((p) => {
-      const ev = (p.events as { id: string; title: string; city: string | null; address: string | null } | null) ?? null;
+      const eventRows = (p.events as JobPostEventSummary[] | null) ?? null;
+      const ev = Array.isArray(eventRows) ? eventRows[0] ?? null : null;
       return {
         id: p.id as string,
         title: p.title as string,
@@ -474,7 +478,8 @@ export async function getPublicJobPostById(id: string): Promise<{
       userApplicationStatus = app?.status ?? null;
     }
 
-    const ev = (jobPost.events as { id: string; title: string; city: string | null; address: string | null } | null) ?? null;
+    const eventRows = (jobPost.events as JobPostEventSummary[] | null) ?? null;
+    const ev = Array.isArray(eventRows) ? eventRows[0] ?? null : null;
 
     return {
       data: {
@@ -515,7 +520,7 @@ export async function applyToJobPost(jobPostId: string, coverNote?: string): Pro
       .eq("id", jobPostId)
       .single();
 
-    // Vérifier si une candidature existe déjà pour cet utilisateur
+    // Vérifier si une candidature existe déjà
     const { data: existingApp } = await supabase
       .from("applications")
       .select("id, status")
@@ -526,7 +531,6 @@ export async function applyToJobPost(jobPostId: string, coverNote?: string): Pro
     let appId: string | null = null;
 
     if (existingApp) {
-      // Si annulée → on peut recandidater
       if (existingApp.status === "WITHDRAWN") {
         const { data: updated, error: updateError } = await supabase
           .from("applications")
@@ -540,7 +544,6 @@ export async function applyToJobPost(jobPostId: string, coverNote?: string): Pro
         return { error: "Vous avez déjà postulé à cette mission." };
       }
     } else {
-      // Nouvelle candidature
       const { data: inserted, error: insertError } = await supabase
         .from("applications")
         .insert({
@@ -592,7 +595,6 @@ export async function cancelApplication(jobPostId: string): Promise<{ error: str
       return { error: "Action non autorisée." };
     }
 
-    // Vérifier que la candidature est encore annulable (APPLIED ou SHORTLISTED)
     const { data: app } = await supabase
       .from("applications")
       .select("id, status")

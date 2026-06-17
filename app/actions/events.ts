@@ -76,7 +76,6 @@ export async function getMyEvents(userId: string): Promise<{
   try {
     const supabase = await createClient();
 
-    // Vérifier le rôle de l'utilisateur
     const { data: userRow } = await supabase
       .from("users")
       .select("role")
@@ -86,7 +85,6 @@ export async function getMyEvents(userId: string): Promise<{
     const isRecruiter = userRow?.role === "RECRUITER";
 
     if (isRecruiter) {
-      // Recruteur : événements qu'il a créés
       const { data, error } = await supabase
         .from("events")
         .select("*, job_posts(count), bookings(count)")
@@ -101,7 +99,6 @@ export async function getMyEvents(userId: string): Promise<{
       }));
       return { data: events, error: null };
     } else {
-      // Intermittent : événements où il a un booking confirmé
       const { data: bookings, error: bookingsError } = await supabase
         .from("bookings")
         .select("event_id")
@@ -191,6 +188,117 @@ export async function getEventWithJobPosts(id: string): Promise<{
       applications_count: (jp.applications as { count: number }[])?.[0]?.count ?? 0,
     }));
     return { data: { ...(data as Event), job_posts: jobPosts }, error: null };
+  } catch (e) {
+    return { data: null, error: e instanceof Error ? e.message : "Erreur inconnue" };
+  }
+}
+
+export type PlanningBooking = {
+  id: string;
+  start_at: string;
+  end_at: string;
+  job_post_title: string | null;
+  event_id: string | null;
+  event_title: string | null;
+  city: string | null;
+  agreed_pay_amount: number | null;
+};
+
+export async function getIntermittentPlanning(): Promise<{
+  data: PlanningBooking[] | null;
+  error: string | null;
+}> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { data: null, error: "Non authentifié." };
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(`
+        id, start_at, end_at, agreed_pay_amount, event_id,
+        job_posts ( title, city ),
+        events ( title, city )
+      `)
+      .eq("intermittent_user_id", user.id)
+      .eq("status", "CONFIRMED")
+      .order("start_at", { ascending: true });
+
+    if (error) return { data: null, error: error.message };
+
+    const bookings: PlanningBooking[] = (data ?? []).map((b: Record<string, unknown>) => {
+      const jp = b.job_posts as { title: string; city: string | null } | null;
+      const ev = b.events as { title: string; city: string | null } | null;
+      return {
+        id: b.id as string,
+        start_at: b.start_at as string,
+        end_at: b.end_at as string,
+        agreed_pay_amount: (b.agreed_pay_amount as number | null) ?? null,
+        event_id: (b.event_id as string | null) ?? null,
+        job_post_title: jp?.title ?? null,
+        event_title: ev?.title ?? null,
+        city: jp?.city ?? ev?.city ?? null,
+      };
+    });
+
+    return { data: bookings, error: null };
+  } catch (e) {
+    return { data: null, error: e instanceof Error ? e.message : "Erreur inconnue" };
+  }
+}
+
+export type IntermittentMission = {
+  booking_id: string;
+  job_post_id: string | null;
+  job_post_title: string;
+  event_id: string | null;
+  event_title: string | null;
+  city: string | null;
+  start_at: string;
+  end_at: string;
+  agreed_pay_amount: number | null;
+};
+
+export async function getIntermittentMissions(): Promise<{
+  data: IntermittentMission[] | null;
+  error: string | null;
+}> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { data: null, error: "Non authentifié." };
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(`
+        id, start_at, end_at, agreed_pay_amount,
+        job_post_id, event_id,
+        job_posts ( id, title, city ),
+        events ( id, title, city )
+      `)
+      .eq("intermittent_user_id", user.id)
+      .eq("status", "CONFIRMED")
+      .order("start_at", { ascending: false });
+
+    if (error) return { data: null, error: error.message };
+
+    const missions: IntermittentMission[] = (data ?? []).map((b: Record<string, unknown>) => {
+      const jp = b.job_posts as { id: string; title: string; city: string | null } | null;
+      const ev = b.events as { id: string; title: string; city: string | null } | null;
+      return {
+        booking_id: b.id as string,
+        job_post_id: jp?.id ?? (b.job_post_id as string | null) ?? null,
+        job_post_title: jp?.title ?? "Mission",
+        event_id: ev?.id ?? (b.event_id as string | null) ?? null,
+        event_title: ev?.title ?? null,
+        city: jp?.city ?? ev?.city ?? null,
+        start_at: b.start_at as string,
+        end_at: b.end_at as string,
+        agreed_pay_amount: (b.agreed_pay_amount as number | null) ?? null,
+      };
+    });
+
+    return { data: missions, error: null };
   } catch (e) {
     return { data: null, error: e instanceof Error ? e.message : "Erreur inconnue" };
   }
