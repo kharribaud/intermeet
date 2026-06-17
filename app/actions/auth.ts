@@ -1,33 +1,116 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { ensureAvatarBucket } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import type { UserRole } from "@/types/database";
 
 export type AuthError = string | null;
 
-const AVATAR_BUCKET = "avatars";
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 Mo
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+import {
+  AVATAR_BUCKET,
+  formatAvatarUploadError,
+  getAvatarStoragePath,
+  validateAvatarFile,
+} from "@/lib/avatar";
 
 async function uploadAvatarAndUpdateProfile(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   file: File,
   table: "recruiter_profiles" | "intermittent_profiles"
-): Promise<void> {
-  if (file.size > MAX_AVATAR_BYTES) return;
-  const type = file.type?.toLowerCase();
-  if (!type || !ALLOWED_TYPES.includes(type)) return;
-  const ext = type.replace("image/", "") || "jpg";
-  const path = `${userId}/avatar.${ext}`;
+): Promise<{ error: AuthError; avatar_url?: string }> {
+  const validation = validateAvatarFile(file);
+  if (validation.error) {
+    return { error: validation.error };
+  }
+
+  const { path, contentType } = getAvatarStoragePath(userId, file);
   const buffer = await file.arrayBuffer();
   const { error: uploadError } = await supabase.storage
     .from(AVATAR_BUCKET)
-    .upload(path, buffer, { contentType: type, upsert: true });
-  if (uploadError) return;
+    .upload(path, buffer, { contentType, upsert: true });
+
+  if (uploadError) {
+    return { error: formatAvatarUploadError(uploadError.message) };
+  }
+
   const { data: urlData } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
-  await supabase.from(table).update({ avatar_url: urlData.publicUrl }).eq("user_id", userId);
+  const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+  const { error: updateError } = await supabase
+    .from(table)
+    .update({ avatar_url: avatarUrl })
+    .eq("user_id", userId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  return { error: null, avatar_url: avatarUrl };
+}
+
+/** Met à jour la photo de profil du compte connecté. */
+export async function updateProfileAvatar(
+  formData: FormData
+): Promise<{ error: AuthError; avatar_url?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    return { error: "Non authentifié." };
+  }
+
+  const file = formData.get("avatar") as File | null;
+  if (!file?.size) {
+    return { error: "Aucun fichier sélectionné." };
+  }
+
+  const bucketError = await ensureAvatarBucket();
+  if (bucketError) {
+    return { error: formatAvatarUploadError(bucketError) };
+  }
+
+  const role = user.user_metadata?.role as UserRole | undefined;
+  const table =
+    role === "RECRUITER" ? "recruiter_profiles" : "intermittent_profiles";
+
+  return uploadAvatarAndUpdateProfile(supabase, user.id, file, table);
+}
+
+/** Enregistre l'URL d'avatar après upload direct vers Supabase Storage (client). */
+export async function saveProfileAvatarUrl(
+  avatarUrl: string
+): Promise<{ error: AuthError; avatar_url?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    return { error: "Non authentifié." };
+  }
+
+  if (!avatarUrl.startsWith("http")) {
+    return { error: "URL d'avatar invalide." };
+  }
+
+  const role = user.user_metadata?.role as UserRole | undefined;
+  const table =
+    role === "RECRUITER" ? "recruiter_profiles" : "intermittent_profiles";
+
+  const { error: updateError } = await supabase
+    .from(table)
+    .update({ avatar_url: avatarUrl })
+    .eq("user_id", user.id);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  return { error: null, avatar_url: avatarUrl };
 }
 
 /** Inscription recruteur */

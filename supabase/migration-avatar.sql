@@ -1,6 +1,6 @@
 -- ============================================================
 -- Photo de profil (avatar)
--- Exécuter dans l'éditeur SQL Supabase après le schéma principal.
+-- Exécuter dans l'éditeur SQL Supabase (SQL Editor) si besoin.
 -- ============================================================
 
 -- Colonne avatar_url sur les deux tables de profils
@@ -10,15 +10,31 @@ alter table public.recruiter_profiles
 alter table public.intermittent_profiles
   add column if not exists avatar_url text;
 
--- Créer le bucket "avatars" dans le Dashboard : Storage > New bucket > id = avatars, Public = on.
--- Ou via l’API : supabase.storage.createBucket('avatars', { public: true }).
+-- Bucket public pour les avatars
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'avatars',
+  'avatars',
+  true,
+  2097152,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
--- Policy : tout le monde peut lire (bucket public)
+-- Policies storage (idempotentes)
+drop policy if exists "Avatar images are publicly accessible" on storage.objects;
+drop policy if exists "Users can upload their own avatar" on storage.objects;
+drop policy if exists "Users can update their own avatar" on storage.objects;
+drop policy if exists "Users can delete their own avatar" on storage.objects;
+
 create policy "Avatar images are publicly accessible"
   on storage.objects for select
   using (bucket_id = 'avatars');
 
--- Policy : un utilisateur peut uploader dans son dossier (auth.uid()/...)
 create policy "Users can upload their own avatar"
   on storage.objects for insert
   with check (
@@ -26,7 +42,6 @@ create policy "Users can upload their own avatar"
     and (storage.foldername(name))[1] = auth.uid()::text
   );
 
--- Policy : un utilisateur peut mettre à jour / supprimer son fichier
 create policy "Users can update their own avatar"
   on storage.objects for update
   using (

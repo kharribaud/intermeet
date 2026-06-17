@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "setup:avatars": "node scripts/setup-avatar-bucket.mjs"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",

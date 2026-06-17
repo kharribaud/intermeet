@@ -52,6 +52,10 @@ create table if not exists public.recruiter_profiles (
   location_point extensions.geography(Point, 4326),
   verified boolean default false,
   avatar_url text,
+  banner_url text,
+  tagline text,
+  bio text,
+  founded_year integer,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
