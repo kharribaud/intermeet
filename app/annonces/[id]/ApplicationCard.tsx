@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { updateApplicationStatus } from "@/app/actions/job-posts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,19 +46,23 @@ export function ApplicationCard({ application, jobTitle }: Props) {
       <div className="flex items-start justify-between gap-4">
         {/* Avatar + info */}
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          {profile.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={profile.display_name}
-              className="h-10 w-10 rounded-full object-cover shrink-0"
-            />
-          ) : (
-            <div className="h-10 w-10 rounded-full bg-[#4b8a7b] text-white flex items-center justify-center text-sm font-semibold shrink-0">
-              {getInitials(profile.display_name)}
-            </div>
-          )}
+          <Link href={`/talents/${profile.user_id}`} className="shrink-0">
+            {profile.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={profile.display_name}
+                className="h-10 w-10 rounded-full object-cover ring-2 ring-transparent hover:ring-[#4b8a7b] transition-all"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-[#4b8a7b] text-white flex items-center justify-center text-sm font-semibold hover:opacity-80 transition-opacity">
+                {getInitials(profile.display_name)}
+              </div>
+            )}
+          </Link>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-foreground text-sm">{profile.display_name}</p>
+            <Link href={`/talents/${profile.user_id}`} className="hover:underline">
+              <p className="font-semibold text-foreground text-sm">{profile.display_name}</p>
+            </Link>
             <p className="text-sm text-muted-foreground">{jobTitle}</p>
             {/* Skills */}
             {skills.length > 0 && (

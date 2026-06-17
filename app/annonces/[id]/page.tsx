@@ -118,7 +118,7 @@ export default async function JobPostPublicPage({ params }: PageProps) {
             jobPostId={data.id}
             isLoggedIn={isLoggedIn}
             isIntermittent={isIntermittent}
-            alreadyApplied={!!data.user_application_status}
+            applicationStatus={data.user_application_status}
             redirectPath={`/annonces/${id}`}
           />
         </div>
@@ -185,7 +185,7 @@ export default async function JobPostPublicPage({ params }: PageProps) {
           jobPostId={data.id}
           isLoggedIn={isLoggedIn}
           isIntermittent={isIntermittent}
-          alreadyApplied={!!data.user_application_status}
+          applicationStatus={data.user_application_status}
           redirectPath={`/annonces/${id}`}
         />
       </div>

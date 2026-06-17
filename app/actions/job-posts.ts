@@ -275,11 +275,75 @@ export async function updateApplicationStatus(
 ): Promise<{ error: string | null }> {
   try {
     const supabase = await createClient();
+
+    const { data: application } = await supabase
+      .from("applications")
+      .select("id, intermittent_user_id, job_post_id")
+      .eq("id", applicationId)
+      .single();
+
     const { error } = await supabase
       .from("applications")
       .update({ status })
       .eq("id", applicationId);
-    return { error: error?.message ?? null };
+    if (error) return { error: error.message };
+
+    if (!application) return { error: null };
+
+    const { data: jobPost } = await supabase
+      .from("job_posts")
+      .select("id, title, recruiter_user_id, event_id, start_at, end_at, pay_amount")
+      .eq("id", application.job_post_id)
+      .single();
+
+    if (status === "ACCEPTED" && jobPost) {
+      await supabase.from("bookings").insert({
+        job_post_id: jobPost.id,
+        event_id: jobPost.event_id ?? null,
+        recruiter_user_id: jobPost.recruiter_user_id,
+        intermittent_user_id: application.intermittent_user_id,
+        start_at: jobPost.start_at,
+        end_at: jobPost.end_at,
+        agreed_pay_amount: jobPost.pay_amount ?? null,
+        status: "CONFIRMED",
+      });
+
+      let eventTitle: string | null = null;
+      if (jobPost.event_id) {
+        const { data: event } = await supabase
+          .from("events")
+          .select("title")
+          .eq("id", jobPost.event_id)
+          .single();
+        eventTitle = event?.title ?? null;
+      }
+
+      const { error: notifError } = await supabase.from("notifications").insert({
+        user_id: application.intermittent_user_id,
+        type: "APPLICATION_ACCEPTED",
+        payload: {
+          application_id: applicationId,
+          job_post_id: jobPost.id,
+          job_post_title: jobPost.title,
+          event_id: jobPost.event_id ?? null,
+          event_title: eventTitle,
+        },
+      });
+      if (notifError) console.error("[notifications] ACCEPTED:", notifError.message);
+    } else if (status === "REJECTED" && jobPost) {
+      const { error: notifError } = await supabase.from("notifications").insert({
+        user_id: application.intermittent_user_id,
+        type: "APPLICATION_REJECTED",
+        payload: {
+          application_id: applicationId,
+          job_post_id: jobPost.id,
+          job_post_title: jobPost.title,
+        },
+      });
+      if (notifError) console.error("[notifications] REJECTED:", notifError.message);
+    }
+
+    return { error: null };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erreur inconnue" };
   }
@@ -440,18 +504,109 @@ export async function applyToJobPost(jobPostId: string, coverNote?: string): Pro
       return { error: "Seuls les intermittents peuvent postuler." };
     }
 
-    const { error } = await supabase.from("applications").insert({
-      job_post_id: jobPostId,
-      intermittent_user_id: user.id,
-      cover_note: coverNote ?? null,
-      status: "APPLIED",
-    });
+    // Récupérer les infos du job post pour la notification
+    const { data: jobPost } = await supabase
+      .from("job_posts")
+      .select("id, title, recruiter_user_id, event_id")
+      .eq("id", jobPostId)
+      .single();
 
-    if (error) {
-      if (error.code === "23505") return { error: "Vous avez déjà postulé à cette mission." };
-      return { error: error.message };
+    // Vérifier si une candidature existe déjà
+    const { data: existingApp } = await supabase
+      .from("applications")
+      .select("id, status")
+      .eq("job_post_id", jobPostId)
+      .eq("intermittent_user_id", user.id)
+      .single();
+
+    let appId: string | null = null;
+
+    if (existingApp) {
+      if (existingApp.status === "WITHDRAWN") {
+        const { data: updated, error: updateError } = await supabase
+          .from("applications")
+          .update({ status: "APPLIED", cover_note: coverNote ?? null })
+          .eq("id", existingApp.id)
+          .select("id")
+          .single();
+        if (updateError) return { error: updateError.message };
+        appId = updated?.id ?? existingApp.id;
+      } else {
+        return { error: "Vous avez déjà postulé à cette mission." };
+      }
+    } else {
+      const { data: inserted, error: insertError } = await supabase
+        .from("applications")
+        .insert({
+          job_post_id: jobPostId,
+          intermittent_user_id: user.id,
+          cover_note: coverNote ?? null,
+          status: "APPLIED",
+        })
+        .select("id")
+        .single();
+      if (insertError) return { error: insertError.message };
+      appId = inserted?.id ?? null;
     }
+
+    // Récupérer le nom de l'intermittent pour la notification
+    const { data: profile } = await supabase
+      .from("intermittent_profiles")
+      .select("display_name")
+      .eq("user_id", user.id)
+      .single();
+
+    // Créer une notification pour le recruteur
+    if (jobPost?.recruiter_user_id) {
+      await supabase.from("notifications").insert({
+        user_id: jobPost.recruiter_user_id,
+        type: "NEW_APPLICATION",
+        payload: {
+          application_id: appId,
+          job_post_id: jobPostId,
+          job_post_title: jobPost.title,
+          intermittent_user_id: user.id,
+          intermittent_name: profile?.display_name ?? "Un intermittent",
+        },
+      });
+    }
+
     return { error: null };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erreur inconnue" };
+  }
+}
+
+export async function cancelApplication(jobPostId: string): Promise<{ error: string | null }> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Vous devez être connecté." };
+    if (user.user_metadata?.role !== "INTERMITTENT") {
+      return { error: "Action non autorisée." };
+    }
+
+    const { data: app } = await supabase
+      .from("applications")
+      .select("id, status")
+      .eq("job_post_id", jobPostId)
+      .eq("intermittent_user_id", user.id)
+      .single();
+
+    if (!app) return { error: "Candidature introuvable." };
+    if (app.status === "ACCEPTED") {
+      return { error: "Vous ne pouvez pas annuler une candidature déjà acceptée." };
+    }
+    if (app.status === "WITHDRAWN") {
+      return { error: "Cette candidature est déjà annulée." };
+    }
+
+    const { error } = await supabase
+      .from("applications")
+      .update({ status: "WITHDRAWN" })
+      .eq("id", app.id);
+
+    return { error: error?.message ?? null };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erreur inconnue" };
   }
