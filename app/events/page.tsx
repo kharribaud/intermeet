@@ -9,27 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AddEventModal } from "@/app/events/new/EventForm";
 import { CreateMissionModal } from "@/app/events/[id]/CreateMissionModal";
+import { formatDateRange } from "@/lib/format-date";
+import { getEventStatusBadge } from "@/lib/event-display";
 import { MapPin, Calendar, Wrench, Hammer, Briefcase } from "lucide-react";
 
 export const metadata = {
   title: "Mes missions | Intermeet",
 };
-
-function getStatusBadge(event: EventWithCounts) {
-  if (event.status === "CANCELLED") return { label: "Annulé", className: "bg-red-500 text-white border-transparent hover:bg-red-600" };
-  const now = new Date();
-  const start = new Date(event.start_at);
-  const end = new Date(event.end_at);
-  if (now > end) return { label: "Terminé", className: "bg-gray-100 text-gray-700 border-transparent hover:bg-gray-200 font-normal" };
-  if (now >= start && now <= end) return { label: "En cours", className: "bg-[#4b8a7b] text-white border-transparent hover:bg-[#3d7064]" };
-  return { label: "Complet", className: "bg-[#eb7a41] text-white border-transparent hover:bg-[#d66e3a]" }; // Remplacé "À venir" par "Complet" (basé sur design) sauf si besoin dynamique
-}
-
-function formatDateRange(start: string | null, end: string | null) {
-  if (!start || !end) return null;
-  const fmt = (d: string) => new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-  return `${fmt(start)} - ${fmt(end)}`;
-}
 
 export default async function EventsPage() {
   const supabase = await createClient();
@@ -189,7 +175,7 @@ export default async function EventsPage() {
       ) : (
         <ul className="space-y-4" aria-label="Liste des événements">
           {events.map((event) => {
-            const status = getStatusBadge(event);
+            const status = getEventStatusBadge(event);
             const exploitationRange = formatDateRange(event.start_at, event.end_at);
             const montageRange = formatDateRange(event.setup_start_at, event.setup_end_at);
             const demontageRange = formatDateRange(event.teardown_start_at, event.teardown_end_at);

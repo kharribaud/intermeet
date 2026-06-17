@@ -39,6 +39,11 @@ export interface RecruiterProfile {
   city: string | null;
   location_point: unknown | null;
   verified: boolean | null;
+  avatar_url: string | null;
+  banner_url: string | null;
+  tagline: string | null;
+  bio: string | null;
+  founded_year: number | null;
   created_at: string;
   updated_at: string;
 }
