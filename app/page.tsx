@@ -6,6 +6,7 @@ import { TalentCard } from "@/components/TalentCard";
 import { SmartSuggestionsBanner } from "@/components/SmartSuggestionsBanner";
 import { SearchFilter } from "@/components/SearchFilter";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const metadata = {
   title: "Talents recommandés | Intermeet",
