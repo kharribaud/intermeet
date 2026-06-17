@@ -275,10 +275,346 @@ export async function updateApplicationStatus(
 ): Promise<{ error: string | null }> {
   try {
     const supabase = await createClient();
+
+    const { data: application } = await supabase
+      .from("applications")
+      .select("id, intermittent_user_id, job_post_id")
+      .eq("id", applicationId)
+      .single();
+
     const { error } = await supabase
       .from("applications")
       .update({ status })
       .eq("id", applicationId);
+    if (error) return { error: error.message };
+
+    if (!application) return { error: null };
+
+    const { data: jobPost } = await supabase
+      .from("job_posts")
+      .select("id, title, recruiter_user_id, event_id, start_at, end_at, pay_amount")
+      .eq("id", application.job_post_id)
+      .single();
+
+    if (status === "ACCEPTED" && jobPost) {
+      await supabase.from("bookings").insert({
+        job_post_id: jobPost.id,
+        event_id: jobPost.event_id ?? null,
+        recruiter_user_id: jobPost.recruiter_user_id,
+        intermittent_user_id: application.intermittent_user_id,
+        start_at: jobPost.start_at,
+        end_at: jobPost.end_at,
+        agreed_pay_amount: jobPost.pay_amount ?? null,
+        status: "CONFIRMED",
+      });
+
+      let eventTitle: string | null = null;
+      if (jobPost.event_id) {
+        const { data: event } = await supabase
+          .from("events")
+          .select("title")
+          .eq("id", jobPost.event_id)
+          .single();
+        eventTitle = event?.title ?? null;
+      }
+
+      const { error: notifError } = await supabase.from("notifications").insert({
+        user_id: application.intermittent_user_id,
+        type: "APPLICATION_ACCEPTED",
+        payload: {
+          application_id: applicationId,
+          job_post_id: jobPost.id,
+          job_post_title: jobPost.title,
+          event_id: jobPost.event_id ?? null,
+          event_title: eventTitle,
+        },
+      });
+      if (notifError) console.error("[notifications] ACCEPTED:", notifError.message);
+    } else if (status === "REJECTED" && jobPost) {
+      const { error: notifError } = await supabase.from("notifications").insert({
+        user_id: application.intermittent_user_id,
+        type: "APPLICATION_REJECTED",
+        payload: {
+          application_id: applicationId,
+          job_post_id: jobPost.id,
+          job_post_title: jobPost.title,
+        },
+      });
+      if (notifError) console.error("[notifications] REJECTED:", notifError.message);
+    }
+
+    return { error: null };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erreur inconnue" };
+  }
+}
+
+export interface PublicJobPost {
+  id: string;
+  title: string;
+  city: string | null;
+  start_at: string;
+  end_at: string;
+  status: string;
+  required_count: number | null;
+  applications_count: number;
+  event: { id: string; title: string; city: string | null; address: string | null } | null;
+  recruiter: { company_name: string; city: string | null; avatar_url: string | null } | null;
+}
+
+export interface PublicJobPostDetail extends PublicJobPost {
+  description: string | null;
+  job_skills: SkillTag[];
+  user_application_status: string | null;
+}
+
+type JobPostEventSummary = {
+  id: string;
+  title: string;
+  city: string | null;
+  address: string | null;
+};
+
+export async function getPublicJobPosts(query?: string): Promise<{
+  data: PublicJobPost[] | null;
+  error: string | null;
+}> {
+  try {
+    const supabase = await createClient();
+
+    let q = supabase
+      .from("job_posts")
+      .select("id, title, city, start_at, end_at, status, required_count, recruiter_user_id, event_id, events(id, title, city, address), applications(id)")
+      .eq("status", "PUBLISHED")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (query) {
+      q = q.ilike("title", `%${query}%`);
+    }
+
+    const { data, error } = await q;
+    if (error) return { data: null, error: error.message };
+
+    const recruiterIds = [...new Set((data ?? []).map((p) => p.recruiter_user_id as string))];
+    let recruiterMap: Record<string, { company_name: string; city: string | null; avatar_url: string | null }> = {};
+
+    if (recruiterIds.length > 0) {
+      const { data: recruiters } = await supabase
+        .from("recruiter_profiles")
+        .select("user_id, company_name, city, avatar_url")
+        .in("user_id", recruiterIds);
+      if (recruiters) {
+        recruiterMap = Object.fromEntries(recruiters.map((r) => [r.user_id, r]));
+      }
+    }
+
+    const posts: PublicJobPost[] = (data ?? []).map((p) => {
+      const eventRows = (p.events as JobPostEventSummary[] | null) ?? null;
+      const ev = Array.isArray(eventRows) ? eventRows[0] ?? null : null;
+      return {
+        id: p.id as string,
+        title: p.title as string,
+        city: (p.city as string | null) ?? ev?.city ?? null,
+        start_at: p.start_at as string,
+        end_at: p.end_at as string,
+        status: p.status as string,
+        required_count: p.required_count as number | null,
+        applications_count: Array.isArray(p.applications) ? p.applications.length : 0,
+        event: ev,
+        recruiter: recruiterMap[p.recruiter_user_id as string] ?? null,
+      };
+    });
+
+    return { data: posts, error: null };
+  } catch (e) {
+    return { data: null, error: e instanceof Error ? e.message : "Erreur inconnue" };
+  }
+}
+
+export async function getPublicJobPostById(id: string): Promise<{
+  data: PublicJobPostDetail | null;
+  error: string | null;
+}> {
+  try {
+    const supabase = await createClient();
+
+    const { data: jobPost, error: jobError } = await supabase
+      .from("job_posts")
+      .select("id, title, description, city, start_at, end_at, status, required_count, recruiter_user_id, event_id, events(id, title, city, address), applications(id)")
+      .eq("id", id)
+      .eq("status", "PUBLISHED")
+      .single();
+    if (jobError) return { data: null, error: jobError.message };
+
+    let jobSkills: SkillTag[] = [];
+    try {
+      const { data: skillRows } = await supabase
+        .from("job_post_skills")
+        .select("skills(id, name, category)")
+        .eq("job_post_id", id);
+      if (skillRows) {
+        jobSkills = (skillRows as unknown as { skills: SkillTag | null }[])
+          .map((r) => r.skills)
+          .filter((s): s is SkillTag => s !== null);
+      }
+    } catch { /* table may not exist yet */ }
+
+    const { data: recruiter } = await supabase
+      .from("recruiter_profiles")
+      .select("company_name, city, avatar_url, website_url")
+      .eq("user_id", jobPost.recruiter_user_id as string)
+      .single();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    let userApplicationStatus: string | null = null;
+    if (user) {
+      const { data: app } = await supabase
+        .from("applications")
+        .select("status")
+        .eq("job_post_id", id)
+        .eq("intermittent_user_id", user.id)
+        .single();
+      userApplicationStatus = app?.status ?? null;
+    }
+
+    const eventRows = (jobPost.events as JobPostEventSummary[] | null) ?? null;
+    const ev = Array.isArray(eventRows) ? eventRows[0] ?? null : null;
+
+    return {
+      data: {
+        id: jobPost.id as string,
+        title: jobPost.title as string,
+        description: (jobPost.description as string | null) ?? null,
+        city: (jobPost.city as string | null) ?? ev?.city ?? null,
+        start_at: jobPost.start_at as string,
+        end_at: jobPost.end_at as string,
+        status: jobPost.status as string,
+        required_count: jobPost.required_count as number | null,
+        applications_count: Array.isArray(jobPost.applications) ? jobPost.applications.length : 0,
+        event: ev,
+        recruiter: recruiter ? { company_name: recruiter.company_name, city: recruiter.city, avatar_url: recruiter.avatar_url } : null,
+        job_skills: jobSkills,
+        user_application_status: userApplicationStatus,
+      },
+      error: null,
+    };
+  } catch (e) {
+    return { data: null, error: e instanceof Error ? e.message : "Erreur inconnue" };
+  }
+}
+
+export async function applyToJobPost(jobPostId: string, coverNote?: string): Promise<{ error: string | null }> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Vous devez être connecté pour postuler." };
+    if (user.user_metadata?.role !== "INTERMITTENT") {
+      return { error: "Seuls les intermittents peuvent postuler." };
+    }
+
+    // Récupérer les infos du job post pour la notification
+    const { data: jobPost } = await supabase
+      .from("job_posts")
+      .select("id, title, recruiter_user_id, event_id")
+      .eq("id", jobPostId)
+      .single();
+
+    // Vérifier si une candidature existe déjà
+    const { data: existingApp } = await supabase
+      .from("applications")
+      .select("id, status")
+      .eq("job_post_id", jobPostId)
+      .eq("intermittent_user_id", user.id)
+      .single();
+
+    let appId: string | null = null;
+
+    if (existingApp) {
+      if (existingApp.status === "WITHDRAWN") {
+        const { data: updated, error: updateError } = await supabase
+          .from("applications")
+          .update({ status: "APPLIED", cover_note: coverNote ?? null })
+          .eq("id", existingApp.id)
+          .select("id")
+          .single();
+        if (updateError) return { error: updateError.message };
+        appId = updated?.id ?? existingApp.id;
+      } else {
+        return { error: "Vous avez déjà postulé à cette mission." };
+      }
+    } else {
+      const { data: inserted, error: insertError } = await supabase
+        .from("applications")
+        .insert({
+          job_post_id: jobPostId,
+          intermittent_user_id: user.id,
+          cover_note: coverNote ?? null,
+          status: "APPLIED",
+        })
+        .select("id")
+        .single();
+      if (insertError) return { error: insertError.message };
+      appId = inserted?.id ?? null;
+    }
+
+    // Récupérer le nom de l'intermittent pour la notification
+    const { data: profile } = await supabase
+      .from("intermittent_profiles")
+      .select("display_name")
+      .eq("user_id", user.id)
+      .single();
+
+    // Créer une notification pour le recruteur
+    if (jobPost?.recruiter_user_id) {
+      await supabase.from("notifications").insert({
+        user_id: jobPost.recruiter_user_id,
+        type: "NEW_APPLICATION",
+        payload: {
+          application_id: appId,
+          job_post_id: jobPostId,
+          job_post_title: jobPost.title,
+          intermittent_user_id: user.id,
+          intermittent_name: profile?.display_name ?? "Un intermittent",
+        },
+      });
+    }
+
+    return { error: null };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erreur inconnue" };
+  }
+}
+
+export async function cancelApplication(jobPostId: string): Promise<{ error: string | null }> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Vous devez être connecté." };
+    if (user.user_metadata?.role !== "INTERMITTENT") {
+      return { error: "Action non autorisée." };
+    }
+
+    const { data: app } = await supabase
+      .from("applications")
+      .select("id, status")
+      .eq("job_post_id", jobPostId)
+      .eq("intermittent_user_id", user.id)
+      .single();
+
+    if (!app) return { error: "Candidature introuvable." };
+    if (app.status === "ACCEPTED") {
+      return { error: "Vous ne pouvez pas annuler une candidature déjà acceptée." };
+    }
+    if (app.status === "WITHDRAWN") {
+      return { error: "Cette candidature est déjà annulée." };
+    }
+
+    const { error } = await supabase
+      .from("applications")
+      .update({ status: "WITHDRAWN" })
+      .eq("id", app.id);
+
     return { error: error?.message ?? null };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erreur inconnue" };

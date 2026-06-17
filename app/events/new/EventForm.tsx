@@ -138,6 +138,10 @@ function EventFormContent({ onClose }: { onClose: () => void }) {
   );
 }
 
+export function EventForm() {
+  return <EventFormContent onClose={() => {}} />;
+}
+
 export function AddEventModal() {
   const [open, setOpen] = useState(false);
 
