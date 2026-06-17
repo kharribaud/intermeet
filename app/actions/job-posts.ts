@@ -368,6 +368,13 @@ export interface PublicJobPostDetail extends PublicJobPost {
   user_application_status: string | null;
 }
 
+type JobPostEventSummary = {
+  id: string;
+  title: string;
+  city: string | null;
+  address: string | null;
+};
+
 export async function getPublicJobPosts(query?: string): Promise<{
   data: PublicJobPost[] | null;
   error: string | null;
@@ -403,7 +410,8 @@ export async function getPublicJobPosts(query?: string): Promise<{
     }
 
     const posts: PublicJobPost[] = (data ?? []).map((p) => {
-      const ev = (p.events as { id: string; title: string; city: string | null; address: string | null } | null) ?? null;
+      const eventRows = (p.events as JobPostEventSummary[] | null) ?? null;
+      const ev = Array.isArray(eventRows) ? eventRows[0] ?? null : null;
       return {
         id: p.id as string,
         title: p.title as string,
@@ -470,7 +478,8 @@ export async function getPublicJobPostById(id: string): Promise<{
       userApplicationStatus = app?.status ?? null;
     }
 
-    const ev = (jobPost.events as { id: string; title: string; city: string | null; address: string | null } | null) ?? null;
+    const eventRows = (jobPost.events as JobPostEventSummary[] | null) ?? null;
+    const ev = Array.isArray(eventRows) ? eventRows[0] ?? null : null;
 
     return {
       data: {

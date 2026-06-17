@@ -73,6 +73,11 @@ function NotificationItem({
           <Link
             href={`/talents/${payload.intermittent_user_id as string}`}
             className="mt-2 inline-flex items-center gap-1 text-xs text-[#4b8a7b] hover:underline font-medium"
+            onClick={() => {
+              if (!notif.read) {
+                markNotificationRead(notif.id).then(onAction);
+              }
+            }}
           >
             <ExternalLink className="size-3" />
             Voir le profil

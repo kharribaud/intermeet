@@ -181,7 +181,9 @@ export default async function EventsPage() {
       {!events?.length ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-            Aucun événement pour le moment.
+            {isRecruiter
+              ? "Aucun événement pour le moment."
+              : "Vous n'êtes inscrit à aucun événement pour le moment. Postulez à une mission pour rejoindre un événement."}
           </CardContent>
         </Card>
       ) : (
